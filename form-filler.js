@@ -11,11 +11,10 @@ function omplirFormulariAmbDadesEspecifiques() {
       "nom": "Adrià",
       "pais": "108", // Espanya
       "codiPostal": "08358",
-      // Per Arenys de Munt, amb CP 08358, assumint que el 'value' del select és la província
       "municipiNom": "ARENYS DE MUNT",
       "municipiValorSelect": "Barcelona",
 
-      "viaTipus": "CARRE", // "CARRE" per Carrer
+      "viaTipus": "CARRE", 
       "viaNom": "Primer de Maig",
       "viaNumero": "17",
       "viaLletra": "",
@@ -52,12 +51,10 @@ function omplirFormulariAmbDadesEspecifiques() {
                 if (element.type === 'checkbox') {
                     if (element.checked !== value) {
                         element.checked = value;
-                        // Si hi ha un onclick, crida'l explícitament. Aquesta pàgina el fa servir per AJAX.
                         if (typeof element.onclick === 'function') {
-                            console.log(`Executant onclick per ${elementId}`);
+                            console.log(`Executant onclick per checkbox ${elementId}`);
                             element.onclick();
                         } else {
-                            // Si no, dispara un esdeveniment 'change'
                             const event = new Event('change', { bubbles: true, cancelable: true });
                             element.dispatchEvent(event);
                         }
@@ -69,7 +66,7 @@ function omplirFormulariAmbDadesEspecifiques() {
                         if (radioGroup[i].value === value) {
                             if (!radioGroup[i].checked) {
                                 console.log(`Fent clic a radio ${radioGroup[i].id}`);
-                                radioGroup[i].click(); // Això hauria de cridar el seu onclick
+                                radioGroup[i].click(); 
                             }
                             foundRadio = true;
                             break;
@@ -77,7 +74,7 @@ function omplirFormulariAmbDadesEspecifiques() {
                     }
                     if (!foundRadio) console.warn(`Radio button amb valor ${value} no trobat per al grup ${element.name}`);
 
-                } else if (isSelect) { // Si és un element SELECT
+                } else if (isSelect) { 
                     let optionFound = false;
                     for (let i = 0; i < element.options.length; i++) {
                         if (element.options[i].value === String(value) || element.options[i].text.trim() === String(value).trim()) {
@@ -92,29 +89,31 @@ function omplirFormulariAmbDadesEspecifiques() {
                             console.warn(`Opció amb valor/text "${value}" no trobada per a ${elementId}. S'intenta establir directament.`);
                          }
                     }
-                    // Disparar onchange si existeix
+                    
                     if (typeof element.onchange === 'function') {
                         console.log(`Executant onchange per ${elementId}`);
-                        element.onchange();
+                        element.onchange({target: element, srcElement: element}); // Intentem passar un objecte event més semblant
                     } else {
                         const event = new Event('change', { bubbles: true, cancelable: true });
                         element.dispatchEvent(event);
                     }
-                } else { // Per a camps de text, textareas, etc.
+                } else { 
                     element.value = value;
-                    // Disparar l'esdeveniment 'change'
-                    if (typeof element.onchange === 'function') {
-                        console.log(`Executant onchange per ${elementId}`);
-                        element.onchange();
-                    } else {
-                        const changeEvent = new Event('change', { bubbles: true, cancelable: true });
-                        element.dispatchEvent(changeEvent);
+                    
+                    if (eventType === 'change' || !eventType) { // Si eventType es 'change' o no especificat
+                        if (typeof element.onchange === 'function') {
+                            console.log(`Executant onchange per ${elementId}`);
+                            element.onchange({target: element, srcElement: element});
+                        } else {
+                            const changeEvent = new Event('change', { bubbles: true, cancelable: true });
+                            element.dispatchEvent(changeEvent);
+                        }
                     }
-                    // Disparar l'esdeveniment 'blur' si és el tipus especificat
+                    
                     if (eventType === 'blur') {
                          if (typeof element.onblur === 'function') {
                             console.log(`Executant onblur per ${elementId}`);
-                            element.onblur();
+                            element.onblur({target: element, srcElement: element});
                         } else {
                             const blurEvent = new Event('blur', { bubbles: true, cancelable: true });
                             element.dispatchEvent(blurEvent);
@@ -129,115 +128,166 @@ function omplirFormulariAmbDadesEspecifiques() {
             console.error(`Error omplint el camp ${elementId}:`, e.message, e.stack);
         }
     }
+    
+    function esperarCondicio(condicioFn, callback, maxIntents = 30, interval = 200) {
+        let intents = 0;
+        const intervalId = setInterval(() => {
+            if (condicioFn() || intents >= maxIntents) {
+                clearInterval(intervalId);
+                if (!condicioFn() && intents >= maxIntents) {
+                    console.warn(`Temps d'espera esgotat per a la condició.`);
+                } else {
+                    console.log("Condició d'espera complerta.");
+                }
+                callback();
+            }
+            intents++;
+        }, interval);
+    }
 
-    const dades = dadesFormulari; // Utilitzem les dades definides a dalt
-
-    // 1. Caràcter de l'actuació (Normalment no es canvia)
+    const dades = dadesFormulari;
 
     // 2. Tipus de persona
     if (dades.tipusPersona) {
-        const radioFisica = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_radioPersonaFisica_0');
-        const radioJuridica = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_radioPersonaJuridica_0');
-        if (dades.tipusPersona === "fisica" && radioFisica && !radioFisica.checked) {
-            radioFisica.click();
-        } else if (dades.tipusPersona === "juridica" && radioJuridica && !radioJuridica.checked) {
-            radioJuridica.click();
+        const radioFisicaId = 'MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_radioPersonaFisica_0';
+        const radioJuridicaId = 'MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_radioPersonaJuridica_0';
+        if (dades.tipusPersona === "fisica") {
+            setValue(radioFisicaId, 'radioPersonaFisica', 'click');
+        } else if (dades.tipusPersona === "juridica") {
+            setValue(radioJuridicaId, 'radioPersonaJuridica', 'click');
         }
     }
 
-    setTimeout(() => {
-        // 3. Dades de la persona
-        if (dades.documentTipus) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_tipusDocument_0', dades.documentTipus, 'change', true);
-        if (dades.documentNumero) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_nifText_0', dades.documentNumero, 'blur');
+    esperarCondicio(
+        () => { // Condició per continuar després del canvi de tipus de persona
+            const cog2El = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_cog2Text_0');
+            if (dades.tipusPersona === "fisica") return cog2El && !cog2El.disabled;
+            if (dades.tipusPersona === "juridica") return cog2El && cog2El.disabled;
+            return true; // Si no hi ha tipus de persona, continua
+        },
+        () => { // Callback un cop la condició anterior es compleix
+            // 3. Dades de la persona
+            if (dades.documentTipus) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_tipusDocument_0', dades.documentTipus, 'change', true);
+            if (dades.documentNumero) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_nifText_0', dades.documentNumero, 'blur');
 
-        if (dades.tipusPersona === "fisica") {
-            if (dades.cognom1) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_cog1Text_0', dades.cognom1, 'change');
-            if (dades.cognom2) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_cog2Text_0', dades.cognom2, 'change');
-            if (dades.nom) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_nomText_0', dades.nom, 'change');
-        } else if (dades.tipusPersona === "juridica" && dades.raoSocial) {
-            setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_cog1Text_0', dades.raoSocial, 'change');
-        }
-        
-        if (dades.pais) {
-            setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_paisLlista_0', dades.pais, 'change', true);
-        }
-        
-        setTimeout(() => {
-            if (dades.codiPostal) {
-                setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_codiPostaText_0', dades.codiPostal, 'change'); 
+            if (dades.tipusPersona === "fisica") {
+                if (dades.hasOwnProperty('cognom1')) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_cog1Text_0', dades.cognom1, 'change');
+                if (dades.hasOwnProperty('cognom2')) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_cog2Text_0', dades.cognom2, 'change');
+                if (dades.hasOwnProperty('nom')) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_nomText_0', dades.nom, 'change');
+            } else if (dades.tipusPersona === "juridica" && dades.hasOwnProperty('raoSocial')) {
+                setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_cog1Text_0', dades.raoSocial, 'change');
             }
             
-            // Augmentem el temps d'espera aquí per donar més marge a l'AJAX del CP
-            setTimeout(() => {
-                const municipiLlistaEl = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_municipiLlista_0');
-                if (dades.pais === "108" && municipiLlistaEl && municipiLlistaEl.style.display !== 'none' && dades.municipiValorSelect) {
-                     console.log(`Intentant seleccionar municipi del desplegable: ${dades.municipiNom} amb valor select: ${dades.municipiValorSelect}`);
-                     setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_municipiLlista_0', dades.municipiValorSelect, 'change', true);
-                } else if (dades.pais !== "108") { // Si el país NO és Espanya, omplim manualment
-                     if (dades.municipiNom) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_municipiText_0', dades.municipiNom);
-                     if (dades.provinciaNom) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_provinciaText_0', dades.provinciaNom);
-                }
-                // Si és Espanya i no hi ha desplegable (CP amb un sol municipi), els camps de text s'haurien d'haver omplert automàticament.
+            if (dades.pais) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_paisLlista_0', dades.pais, 'change', true);
 
-                if (dades.viaTipus) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_tipusVia_0', dades.viaTipus, 'change', true);
-                if (dades.viaNom) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_viaText_0', dades.viaNom);
-
-                const numeroTextEl = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_numeroText_0');
-                const kmTextEl = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_kmText_0');
-
-                if (dades.hasOwnProperty('km') && dades.km !== "" && kmTextEl) {
-                    setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_kmText_0', dades.km, 'change');
-                    setTimeout(() => { 
-                         if (dades.hasOwnProperty('hm') && dades.hm !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_hmText_0', dades.hm);
-                    }, 300);
-                } else if (dades.hasOwnProperty('viaNumero') && dades.viaNumero !== "" && numeroTextEl) {
-                    setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_numeroText_0', dades.viaNumero, 'change');
-                     setTimeout(() => { 
-                        if (dades.hasOwnProperty('viaLletra') && dades.viaLletra !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_lletraText_0', dades.viaLletra);
-                        if (dades.hasOwnProperty('viaNumeroSuperior') && dades.viaNumeroSuperior !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_numeroSupText_0', dades.viaNumeroSuperior);
-                        if (dades.hasOwnProperty('viaLletraSuperior') && dades.viaLletraSuperior !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_lletraSupText_0', dades.viaLletraSuperior);
-                     }, 300);
-                }
-                
-                if (dades.hasOwnProperty('bloc') && dades.bloc !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_blocText_0', dades.bloc);
-                if (dades.hasOwnProperty('portal') && dades.portal !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_portalText_0', dades.portal);
-                if (dades.hasOwnProperty('escala') && dades.escala !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_escalaText_0', dades.escala);
-                if (dades.hasOwnProperty('planta') && dades.planta !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_plantaText_0', dades.planta);
-                if (dades.hasOwnProperty('porta') && dades.porta !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_portaText_0', dades.porta);
-                if (dades.hasOwnProperty('pseudovia') && dades.pseudovia !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_pseudoviaText_0', dades.pseudovia);
-                if (dades.hasOwnProperty('apartatCorreus') && dades.apartatCorreus !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_apartatCorreusText_0', dades.apartatCorreus);
-                
-                if (dades.telefonFix) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_telefonText_0', dades.telefonFix);
-                if (dades.telefonMobil) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_mobilText_0', dades.telefonMobil, 'change');
-                if (dades.fax) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_faxText_0', dades.fax);
-                if (dades.correuElectronic) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_emailText_0', dades.correuElectronic, 'change');
-        
-                if (dades.exposoText) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesExposicio_exposicioFetsText', dades.exposoText, 'change');
-                if (dades.solicitoText) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesExposicio_solicitoText', dades.solicitoText, 'change');
-        
-                const chkNotificacions = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesAutoritzacio_notificacionsSi');
-                if (chkNotificacions && dades.hasOwnProperty('autoritzaNotificacions')) {
-                    if (chkNotificacions.checked !== dades.autoritzaNotificacions) {
-                         chkNotificacions.click(); 
+            esperarCondicio( // Esperar canvi de país si és necessari
+                () => {
+                    const cpEl = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_codiPostaText_0');
+                    const municipiTextEl = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_municipiText_0');
+                    // Si el país no és Espanya, el camp municipi hauria de ser editable.
+                    // Si és Espanya, el CP hauria d'estar buit o el municipi hauria de ser editable (si no s'autocompleta)
+                    if (dades.pais !== "108") return municipiTextEl && !municipiTextEl.readOnly;
+                    return cpEl; // Només comprovem que existeix el CP per ara
+                },
+                () => { // Callback un cop el país s'ha processat
+                    if (dades.codiPostal) {
+                        // IMPORTANT: Establim valor i DESPRÉS disparem 'blur'
+                        const cpElement = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_codiPostaText_0');
+                        if (cpElement) {
+                            cpElement.value = dades.codiPostal;
+                            console.log(`Camp ${cpElement.id} establert amb: ${dades.codiPostal}`);
+                            if (typeof cpElement.onchange === 'function') { // Cridar onchange primer si existeix
+                                console.log(`Executant onchange per ${cpElement.id}`);
+                                cpElement.onchange({target: cpElement, srcElement: cpElement});
+                            }
+                            if (typeof cpElement.onblur === 'function') { // Després onblur
+                                console.log(`Executant onblur (simulant Tab) per ${cpElement.id}`);
+                                cpElement.onblur({target: cpElement, srcElement: cpElement});
+                            } else { // Fallback si no hi ha onblur definit directament
+                                const blurEvent = new Event('blur', { bubbles: true, cancelable: true });
+                                cpElement.dispatchEvent(blurEvent);
+                                 const changeEvent = new Event('change', { bubbles: true, cancelable: true }); // ASP.NET de vegades necessita change
+                                cpElement.dispatchEvent(changeEvent);
+                            }
+                        }
                     }
-                     setTimeout(() => { 
-                         if (dades.autoritzaNotificacions) {
-                             if (dades.notificacionsDocumentTipus) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesAutoritzacio_tipusDocument', dades.notificacionsDocumentTipus, 'change', true);
-                             if (dades.notificacionsDocumentNumero) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesAutoritzacio_dniText', dades.notificacionsDocumentNumero, 'change');
-                             if (dades.notificacionsCorreuElectronic) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesAutoritzacio_mailText', dades.notificacionsCorreuElectronic, 'change');
-                             if (dades.notificacionsTelefonMobil) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesAutoritzacio_mobilText', dades.notificacionsTelefonMobil, 'change');
-                         }
-                         console.log("Emplenament del formulari completat.");
-                     }, 1500); 
-                } else {
-                     console.log("Emplenament del formulari completat (sense secció de notificacions o checkbox no trobada).");
-                }
-            }, 2500); // Augmentat temps per carregar municipi/província
-        }, (dades.pais && dades.pais !== "108" ? 100 : 1000)); // Augmentat temps si és Espanya
-    }, 1000); // Augmentat temps per aplicar canvi de tipus persona
+                    
+                    esperarCondicio( // Esperar que municipiText_0 tingui valor o municipiLlista_0 tingui opcions
+                        () => {
+                            const municipiTextEl = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_municipiText_0');
+                            const municipiLlistaEl = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_municipiLlista_0');
+                            return (municipiTextEl && municipiTextEl.value !== "") || (municipiLlistaEl && municipiLlistaEl.options.length > 0 && municipiLlistaEl.style.display !== 'none');
+                        },
+                        () => { // Callback un cop el municipi s'ha carregat
+                            const municipiLlistaEl = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_municipiLlista_0');
+                            if (dades.pais === "108" && municipiLlistaEl && municipiLlistaEl.style.display !== 'none' && dades.municipiValorSelect) {
+                                 setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_municipiLlista_0', dades.municipiValorSelect, 'change', true);
+                            } else if (dades.pais !== "108") {
+                                 if (dades.municipiNom) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_municipiText_0', dades.municipiNom);
+                                 // No omplim província si no és Espanya, ja que el camp pot estar readonly i omplir-se pel municipi
+                            }
+
+                            if (dades.viaTipus) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_tipusVia_0', dades.viaTipus, 'change', true);
+                            if (dades.viaNom) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_viaText_0', dades.viaNom);
+                            
+                            const kmEl = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_kmText_0');
+                            if (dades.hasOwnProperty('km') && dades.km !== "" && kmEl) {
+                                setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_kmText_0', dades.km, 'change');
+                                esperarCondicio(() => !document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_hmText_0').disabled || (dades.km === ""), () => {
+                                    if (dades.hasOwnProperty('hm') && dades.hm !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_hmText_0', dades.hm);
+                                });
+                            } else if (dades.hasOwnProperty('viaNumero') && dades.viaNumero !== "") {
+                                setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_numeroText_0', dades.viaNumero, 'change');
+                                esperarCondicio(() => !document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_lletraText_0').disabled || (dades.viaNumero === ""), () => {
+                                    if (dades.hasOwnProperty('viaLletra') && dades.viaLletra !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_lletraText_0', dades.viaLletra);
+                                    if (dades.hasOwnProperty('viaNumeroSuperior') && dades.viaNumeroSuperior !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_numeroSupText_0', dades.viaNumeroSuperior);
+                                    if (dades.hasOwnProperty('viaLletraSuperior') && dades.viaLletraSuperior !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_lletraSupText_0', dades.viaLletraSuperior);
+                                });
+                            }
+                            
+                            if (dades.hasOwnProperty('bloc') && dades.bloc !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_blocText_0', dades.bloc);
+                            if (dades.hasOwnProperty('portal') && dades.portal !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_portalText_0', dades.portal);
+                            if (dades.hasOwnProperty('escala') && dades.escala !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_escalaText_0', dades.escala);
+                            if (dades.hasOwnProperty('planta') && dades.planta !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_plantaText_0', dades.planta);
+                            if (dades.hasOwnProperty('porta') && dades.porta !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_portaText_0', dades.porta);
+                            if (dades.hasOwnProperty('pseudovia') && dades.pseudovia !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_pseudoviaText_0', dades.pseudovia);
+                            if (dades.hasOwnProperty('apartatCorreus') && dades.apartatCorreus !== "") setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_apartatCorreusText_0', dades.apartatCorreus);
+                    
+                            if (dades.telefonFix) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_telefonText_0', dades.telefonFix);
+                            if (dades.telefonMobil) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_mobilText_0', dades.telefonMobil, 'change');
+                            if (dades.fax) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_faxText_0', dades.fax);
+                            if (dades.correuElectronic) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_emailText_0', dades.correuElectronic, 'change');
+                    
+                            if (dades.exposoText) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesExposicio_exposicioFetsText', dades.exposoText, 'change');
+                            if (dades.solicitoText) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesExposicio_solicitoText', dades.solicitoText, 'change');
+                    
+                            const chkNotificacions = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesAutoritzacio_notificacionsSi');
+                            if (chkNotificacions && dades.hasOwnProperty('autoritzaNotificacions')) {
+                                if (chkNotificacions.checked !== dades.autoritzaNotificacions) {
+                                     chkNotificacions.click(); 
+                                }
+                                esperarCondicio( // Esperar que els camps de notificació s'habilitin/deshabilitin
+                                    () => {
+                                        const docNotifEl = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesAutoritzacio_dniText');
+                                        return (dades.autoritzaNotificacions && docNotifEl && !docNotifEl.disabled) || (!dades.autoritzaNotificacions && docNotifEl && docNotifEl.disabled);
+                                    },
+                                    () => { // Callback un cop els camps de notificació estan en l'estat esperat
+                                         if (dades.autoritzaNotificacions) {
+                                             if (dades.notificacionsDocumentTipus) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesAutoritzacio_tipusDocument', dades.notificacionsDocumentTipus, 'change', true);
+                                             if (dades.notificacionsDocumentNumero) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesAutoritzacio_dniText', dades.notificacionsDocumentNumero, 'change');
+                                             if (dades.notificacionsCorreuElectronic) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesAutoritzacio_mailText', dades.notificacionsCorreuElectronic, 'change');
+                                             if (dades.notificacionsTelefonMobil) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesAutoritzacio_mobilText', dades.notificacionsTelefonMobil, 'change');
+                                         }
+                                         console.log("Emplenament del formulari completat.");
+                                    }, 15, 200); // Espera més curta per habilitació de camps
+                            } else {
+                                 console.log("Emplenament del formulari completat (sense secció de notificacions o checkbox no trobada).");
+                            }
+                        }, 30, 150); // Intervals més llargs per l'autocompletat del CP
+                }, 15, 200); // Espera més curta per habilitació de camps després de canvi de país
+        }, 15, 200); // Espera més curta per habilitació de camps després de canvi de tipus de persona
 }
 
-// Cridem la funció
 omplirFormulariAmbDadesEspecifiques();
 
 // <<--- FINAL DE LA COPIA --->>
