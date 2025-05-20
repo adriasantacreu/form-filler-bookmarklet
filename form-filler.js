@@ -1,26 +1,23 @@
 javascript:(function() {
-    // 1. Demanar el JSON a l'usuari
-    const dadesJsonString = prompt("Enganxa aquí el teu JSON per omplir el formulari (pots trobar una plantilla a la descripció del bookmarklet o al README del projecte):");
-
+    const dadesJsonString = prompt("Enganxa aquí el teu JSON per omplir el formulari:");
     if (!dadesJsonString) {
         console.log("Operació cancel·lada per l'usuari.");
-        return; // Sortir si l'usuari cancel·la
+        return;
     }
-
     let dadesFormulari;
     try {
         dadesFormulari = JSON.parse(dadesJsonString);
     } catch (e) {
-        alert("Error: El text introduït no és un JSON vàlid. Si us plau, revisa'l.");
+        alert("Error: El text introduït no és un JSON vàlid.");
         console.error("Error parsejant JSON:", e);
-        return; // Sortir si el JSON no és vàlid
+        return;
     }
 
-    // 2. Funció principal per omplir el formulari
     function omplirFormulariIntern(dades) {
         console.log("Iniciant emplenament del formulari...");
 
         function setValue(elementId, value, eventType = 'change', isSelect = false) {
+            // ... (la funció setValue es manté igual que a la versió anterior formatada)
             try {
                 const element = document.getElementById(elementId);
                 if (element) {
@@ -60,7 +57,7 @@ javascript:(function() {
                             }
                         }
                         if (!optionFound) {
-                            element.value = value; 
+                            element.value = value;
                             if (element.value !== String(value)) {
                                 console.warn(`Opció amb valor/text "${value}" no trobada per a ${elementId}. S'intenta establir directament.`);
                             }
@@ -100,7 +97,29 @@ javascript:(function() {
             }
         }
 
-        // Ordre d'emplenament amb `setTimeout` per gestionar dependències i AJAX
+        // Funció per esperar que un camp s'ompli (per AJAX de la pàgina)
+        function esperarCampOmplert(campId, callback, maxIntents = 20, interval = 200) {
+            let intents = 0;
+            const intervalId = setInterval(() => {
+                const camp = document.getElementById(campId);
+                // Comprovem si el camp té valor O si el desplegable de municipis (si existeix) té opcions
+                const municipiLlistaEl = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_municipiLlista_0');
+                const condicioComplerta = (camp && camp.value !== "") || (municipiLlistaEl && municipiLlistaEl.options.length > 0 && municipiLlistaEl.style.display !== 'none');
+
+                if (condicioComplerta || intents >= maxIntents) {
+                    clearInterval(intervalId);
+                    if (condicioComplerta) {
+                        console.log(`Camp ${campId} (o llista de municipis) detectat com a omplert/carregat.`);
+                    } else {
+                        console.warn(`Temps d'espera esgotat per al camp ${campId} (o llista de municipis).`);
+                    }
+                    callback(); // Cridar la funció següent
+                }
+                intents++;
+            }, interval);
+        }
+
+
         if (dades.tipusPersona) {
             const radioFisicaId = 'MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_radioPersonaFisica_0';
             const radioJuridicaId = 'MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_radioPersonaJuridica_0';
@@ -111,7 +130,7 @@ javascript:(function() {
             }
         }
 
-        setTimeout(() => {
+        setTimeout(() => { // Espera per canvi de tipus de persona
             if (dades.documentTipus) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_tipusDocument_0', dades.documentTipus, 'change', true);
             if (dades.documentNumero) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_nifText_0', dades.documentNumero, 'blur');
 
@@ -125,10 +144,11 @@ javascript:(function() {
             
             if (dades.pais) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_paisLlista_0', dades.pais, 'change', true);
 
-            setTimeout(() => {
+            setTimeout(() => { // Espera per canvi de país
                 if (dades.codiPostal) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_codiPostaText_0', dades.codiPostal, 'change');
                 
-                setTimeout(() => {
+                // Esperar que el municipi s'ompli abans de continuar
+                esperarCampOmplert('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_municipiText_0', () => {
                     const municipiLlistaEl = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_municipiLlista_0');
                     if (dades.pais === "108" && municipiLlistaEl && municipiLlistaEl.style.display !== 'none' && dades.municipiValorSelect) {
                         setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesPersona_ctrlPersones_dadesPersonaRepeater_municipiLlista_0', dades.municipiValorSelect, 'change', true);
@@ -172,9 +192,9 @@ javascript:(function() {
                     const chkNotificacions = document.getElementById('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesAutoritzacio_notificacionsSi');
                     if (chkNotificacions && dades.hasOwnProperty('autoritzaNotificacions')) {
                         if (chkNotificacions.checked !== dades.autoritzaNotificacions) {
-                            chkNotificacions.click();
+                            chkNotificacions.click(); // Això hauria de disparar la seva lògica
                         }
-                        setTimeout(() => {
+                        setTimeout(() => { // Espera per l'AJAX del checkbox de notificacions
                             if (dades.autoritzaNotificacions) {
                                 if (dades.notificacionsDocumentTipus) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesAutoritzacio_tipusDocument', dades.notificacionsDocumentTipus, 'change', true);
                                 if (dades.notificacionsDocumentNumero) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesAutoritzacio_dniText', dades.notificacionsDocumentNumero, 'change');
@@ -182,15 +202,14 @@ javascript:(function() {
                                 if (dades.notificacionsTelefonMobil) setValue('MainContent_Contingut_ctrlFormulariEspecific_ctrlFormulariGeneric_dadesAutoritzacio_mobilText', dades.notificacionsTelefonMobil, 'change');
                             }
                             console.log("Emplenament del formulari completat.");
-                        }, 1500);
+                        }, 1500); // Temps d'espera per a l'actualització dels camps de notificació
                     } else {
-                        console.log("Emplenament del formulari completat (sense secció de notificacions).");
+                        console.log("Emplenament del formulari completat (sense secció de notificacions o checkbox no trobada).");
                     }
-                }, 2000); // Temps per carregar municipi/provincia
+                }); // Fi de l'espera per camp municipi
             }, (dades.pais && dades.pais !== "108" ? 100 : 800)); // Espera menys si no és Espanya
-        }, 800); // Temps per aplicar canvi de tipus persona
+        }, 800); // Espera per canvi de tipus de persona
     }
 
-    // 3. Cridar la funció d'omplir
     omplirFormulariIntern(dadesFormulari);
 })();
