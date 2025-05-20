@@ -1,47 +1,7 @@
 // <<--- COPIA DES D'AQUÍ FINS AL FINAL --->>
 
 function omplirFormulariAmbDadesEspecifiques() {
-    // --- LES TEVES DADES ---
-    const dadesFormulari = {
-      "tipusPersona": "fisica",
-      "documentTipus": "1", // DNI
-      "documentNumero": "38875755M",
-      "cognom1": "Santacreu",
-      "cognom2": "Giménez",
-      "nom": "Adrià",
-      "pais": "108", // Espanya
-      "codiPostal": "08358",
-      "municipiNom": "ARENYS DE MUNT",
-      "municipiValorSelect": "Barcelona",
-
-      "viaTipus": "CARRE", 
-      "viaNom": "Primer de Maig",
-      "viaNumero": "17",
-      "viaLletra": "",
-      "viaNumeroSuperior": "",
-      "viaLletraSuperior": "",
-      "km": "",
-      "hm": "",
-      "bloc": "",
-      "portal": "",
-      "escala": "",
-      "planta": "",
-      "porta": "",
-      "pseudovia": "",
-      "apartatCorreus": "",
-      "telefonFix": "",
-      "telefonMobil": "605205286",
-      "fax": "",
-      "correuElectronic": "adriasantacreu@gmail.com",
-      "exposoText": "Test Exposo.",
-      "solicitoText": "Test Solicito.",
-      "autoritzaNotificacions": true,
-      "notificacionsDocumentTipus": "1",
-      "notificacionsDocumentNumero": "38875755M",
-      "notificacionsCorreuElectronic": "adriasantacreu@gmail.com",
-      "notificacionsTelefonMobil": "605205286"
-    };
-
+    
     console.log("Iniciant l'emplenament del formulari...");
 
     function setValue(elementId, value, eventType = 'change', isSelect = false) {
